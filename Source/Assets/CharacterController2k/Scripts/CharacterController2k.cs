@@ -1512,6 +1512,28 @@ namespace Controller2k
                 Vector3 project = Vector3.Cross(direction, slideNormal);
                 project = Vector3.Cross(slideNormal, project);
 
+                // FIX players getting stuck on flat surfaces if there are tiny imperfections.
+                //
+                // The issue occurs because the character is hitting the microscopic vertical edge
+                // (i.e. stripes on a street) but the physics engine returns the normal of the top face (0, 1, 0)
+                // (or the raycast replacement logic overrides it to the top face).
+                //
+                // When the MoveAwayFromObstacle method attempts to slide the character along this upward normal,
+                // it projects the horizontal movement vector onto the (0, 1, 0) plane. Projecting a perfectly
+                // horizontal vector onto a perfectly vertical normal results in the exact same horizontal vector.
+                // Because the movement vector doesn't change and doesn't gain any height to clear the tiny lip,
+                // the next iteration of the MoveLoop hits the exact same obstacle, causing an infinite loop until
+                // StuckInfo triggers.
+                //
+                // To fix this, we need to detect when the character hits a floor-like surface but the movement
+                // vector is perfectly perpendicular to it (meaning it's blocked by a tiny seam). By adding a
+                // slight upward angle to the projected vector, the character will seamlessly glide over the
+                // microscopic lip.
+                if (slideNormal.y > 0.9f && Mathf.Abs(Vector3.Dot(direction, slideNormal)) < 0.01f)
+                {
+                    project.y += 0.1f;
+                }
+
                 if (slopeIsSteep && project.y > 0.0f)
                 {
                     // Do not move up the slope

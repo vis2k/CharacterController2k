@@ -14,6 +14,10 @@ namespace Controller2k
         // If character's position does not change by more than this amount then we assume the character is stuck.
         const float k_StuckDistance = 0.001f;
 
+        // Stuck detection direction epsilon
+        const float k_MinStuckOpposingCheckMagnitude = 0.01f;
+        const float k_MinStuckOpposingCheckMagnitudeSqr = k_MinStuckOpposingCheckMagnitude * k_MinStuckOpposingCheckMagnitude;
+
         // If character collided this number of times during the movement loop then test if character is stuck by examining the position
         const int k_HitCountForStuck = 6;
 
@@ -46,7 +50,9 @@ namespace Controller2k
             if (!isStuck)
             {
                 // From Quake2: "if velocity is against the original velocity, stop dead to avoid tiny occilations in sloping corners"
-                if (currentMoveVector.sqrMagnitude.NotEqualToZero() &&
+                // Fix: compare currentMove magnitude to epsilon (not 0).
+                //      avoids getting stuck on flat surfaces sometimes!
+                if (currentMoveVector.sqrMagnitude > k_MinStuckOpposingCheckMagnitudeSqr &&
                     Vector3.Dot(currentMoveVector, originalMoveVector) <= 0.0f)
                 {
                     isStuck = true;
